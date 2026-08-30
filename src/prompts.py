@@ -17,15 +17,22 @@ def build_rag_prompt(query: str, retrieved_chunks: list) -> str:
         context_str += f"[Source: {chunk['source']} | Page: {chunk['page']}]\n"
         context_str += f"{chunk['text']}\n\n"
         
-    prompt = f"""DOCUMENT CONTEXT:
+        prompt = f"""DOCUMENT CONTEXT:
 {context_str}
 
 USER QUESTION:
 {query}
 
 INSTRUCTIONS:
-Answer the question using the supplied document context. Do not invent information. If the context is insufficient, say so. 
+Answer the question strictly using the supplied document context. Do not invent information. If the context is insufficient, say so. 
+
+FORMAT YOUR RESPONSE AS FOLLOWS:
+- Provide a direct, high-level summary in 1-2 sentences.
+- List the exact technical parameters, conditions, or regulatory clauses using bullet points.
+- Explain the operating rationale or concepts step-by-step.
+
 At the end of your response, ALWAYS include a 'Sources' section listing the document names and page numbers you used. If no documents were used, do not list sources.
 """
     return prompt
+
 

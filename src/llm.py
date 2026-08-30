@@ -17,6 +17,7 @@ class GeminiService:
         # Initialize model with system instruction
         self.model = genai.GenerativeModel(
             model_name=config.GEMINI_MODEL_NAME,
+system_instruction=SYSTEM_INSTRUCTION
         )
 
     def generate_response(self, prompt: str, chat_history: list = None) -> str:

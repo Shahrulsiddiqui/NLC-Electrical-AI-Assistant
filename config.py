@@ -13,11 +13,11 @@ CHROMA_PATH.mkdir(parents=True, exist_ok=True)
 DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Chunking Configuration
-CHUNK_SIZE = 800      # Words per chunk
-CHUNK_OVERLAP = 150   # Overlap in words
+CHUNK_SIZE = 400      # Words per chunk
+CHUNK_OVERLAP = 50   # Overlap in words
 
 # Embedding Configuration
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 # Vector Store Configuration
 COLLECTION_NAME = "nlc_electrical_docs"

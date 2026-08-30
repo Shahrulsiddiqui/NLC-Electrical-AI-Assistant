@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class VectorStore:
     def __init__(self):
-        self.client = chromadb.PersistentClient(path=str(config.CHROMA_PATH))
+        self.client = chromadb.Client()
         self.collection = self.client.get_or_create_collection(name=config.COLLECTION_NAME)
 
     def add_chunks(self, chunks: List[Dict[str, Any]], embeddings: List[List[float]]):

@@ -24,4 +24,4 @@ COLLECTION_NAME = "nlc_electrical_docs"
 TOP_K_RETRIEVAL = 5
 
 # LLM Configuration
-GEMINI_MODEL_NAME = "gemini-pro"
+GEMINI_MODEL_NAME ="gemini-1.5-flash"

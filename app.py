@@ -6,11 +6,12 @@ import time
 # Load environment variables first
 load_dotenv()
 
-from src.pdf_loader import load_pdf_from_bytes
-from src.chunker import chunk_text
-from src.rag import RAGPipeline
-from src.vector_store import VectorStore
-from src.embeddings import EmbeddingService
+from src.ingestion.pdf_loader import load_pdf_from_bytes
+from src.ingestion.chunker import chunk_text
+from src.retrieval.vector_store import VectorStore
+from src.retrieval.embeddings import EmbeddingService
+from src.ai.rag import RAGPipeline # Assuming rag.py moved to ai/
+
 
 st.set_page_config(page_title="NLC Electrical AI", page_icon="⚡", layout="wide")
 

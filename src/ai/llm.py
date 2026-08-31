@@ -14,46 +14,51 @@ class GeminiService:
             
         genai.configure(api_key=api_key)
         
-        # Initialize model with system instruction
         self.model = genai.GenerativeModel(
             model_name=config.GEMINI_MODEL_NAME,
             system_instruction=SYSTEM_INSTRUCTION
         )
 
     def generate_response(self, prompt: str, chat_history: list = None) -> str:
-        """Sends the formatted RAG prompt to Gemini along with conversation history."""
+        """Fallback static response method."""
         try:
             formatted_history = []
             if chat_history:
                 for msg in chat_history:
-                    role = "model" if msg["role"] == "assistant" else "user"
-                    formatted_history.append({"role": role, "parts": [msg["content"]]})
+                    if msg.get("content"):  # Prevent empty history crashes
+                        role = "model" if msg["role"] == "assistant" else "user"
+                        formatted_history.append({"role": role, "parts": [msg["content"]]})
                     
             formatted_history.append({"role": "user", "parts": [prompt]})
-            
             response = self.model.generate_content(formatted_history)
             return response.text
-            
         except Exception as e:
             logger.error(f"Gemini API Error: {str(e)}")
             return f"Error communicating with AI: {str(e)}"
 
     def generate_stream(self, prompt: str, chat_history: list = None):
-        """Streams the response from Gemini token by token."""
+        """Streams the response securely, catching silent chunk errors."""
         try:
             formatted_history = []
             if chat_history:
                 for msg in chat_history:
-                    role = "model" if msg["role"] == "assistant" else "user"
-                    formatted_history.append({"role": role, "parts": [msg["content"]]})
+                    # Never pass empty strings to Gemini; it causes silent crashes
+                    if msg.get("content") and str(msg.get("content")).strip():
+                        role = "model" if msg["role"] == "assistant" else "user"
+                        formatted_history.append({"role": role, "parts": [msg["content"]]})
                     
             formatted_history.append({"role": "user", "parts": [prompt]})
             
             response = self.model.generate_content(formatted_history, stream=True)
+            
             for chunk in response:
-                if chunk.text:
-                    yield chunk.text
+                try:
+                    # Safely extract text. If Google blocks a chunk (safety rating), it skips smoothly.
+                    if chunk.text:
+                        yield chunk.text
+                except Exception:
+                    continue
                 
         except Exception as e:
             logger.error(f"Gemini Streaming Error: {str(e)}")
-            yield f"Error communicating with AI: {str(e)}"
+            yield f"\n\n⚠️ **API Error:** {str(e)}"

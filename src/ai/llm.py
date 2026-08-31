@@ -21,20 +21,14 @@ class GeminiService:
         )
 
     def generate_response(self, prompt: str, chat_history: list = None) -> str:
-        """
-        Sends the formatted RAG prompt to Gemini along with conversation history.
-        """
+        """Sends the formatted RAG prompt to Gemini along with conversation history."""
         try:
-            # We don't use genai.ChatSession natively because we inject RAG context into the final prompt.
-            # Instead, we pass the Streamlit history to establish memory.
             formatted_history = []
             if chat_history:
                 for msg in chat_history:
-                    # Map 'assistant' from Streamlit to 'model' for Gemini
                     role = "model" if msg["role"] == "assistant" else "user"
                     formatted_history.append({"role": role, "parts": [msg["content"]]})
                     
-            # Add the current prompt as the latest user message
             formatted_history.append({"role": "user", "parts": [prompt]})
             
             response = self.model.generate_content(formatted_history)
@@ -43,3 +37,23 @@ class GeminiService:
         except Exception as e:
             logger.error(f"Gemini API Error: {str(e)}")
             return f"Error communicating with AI: {str(e)}"
+
+    def generate_stream(self, prompt: str, chat_history: list = None):
+        """Streams the response from Gemini token by token."""
+        try:
+            formatted_history = []
+            if chat_history:
+                for msg in chat_history:
+                    role = "model" if msg["role"] == "assistant" else "user"
+                    formatted_history.append({"role": role, "parts": [msg["content"]]})
+                    
+            formatted_history.append({"role": "user", "parts": [prompt]})
+            
+            response = self.model.generate_content(formatted_history, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+                
+        except Exception as e:
+            logger.error(f"Gemini Streaming Error: {str(e)}")
+            yield f"Error communicating with AI: {str(e)}"

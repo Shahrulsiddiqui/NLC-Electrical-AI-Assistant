@@ -14,9 +14,14 @@ from src.engineering.troubleshooting import TroubleshootingFramework
 
 st.set_page_config(page_title="NLC Electrical AI", page_icon="⚡", layout="wide")
 
+# ==========================================
+# INITIALIZATION
+# ==========================================
 @st.cache_resource
 def get_rag_components():
-    return RAGPipeline(), VectorStore(), EmbeddingService()
+    rag = RAGPipeline()
+    # CRITICAL FIX: Force the UI and Pipeline to share the exact same database memory
+    return rag, rag.vector_store, rag.embedder
 
 rag_pipeline, vector_store, embedder = get_rag_components()
 
@@ -106,7 +111,6 @@ with tab_chat:
                         if idx < len(response_data["sources"]) - 1:
                             st.divider()
             
-            # Safe append: Only save to history if it actually generated text
             if answer and str(answer).strip():
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 

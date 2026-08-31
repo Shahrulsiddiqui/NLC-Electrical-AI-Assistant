@@ -20,45 +20,58 @@ class GeminiService:
         )
 
     def generate_response(self, prompt: str, chat_history: list = None) -> str:
-        """Fallback static response method."""
+        """Standard generation with strict role-alternation enforcement."""
         try:
             formatted_history = []
+            last_role = None
+            
             if chat_history:
                 for msg in chat_history:
-                    if msg.get("content"):  # Prevent empty history crashes
+                    content = msg.get("content")
+                    if content and str(content).strip():
                         role = "model" if msg["role"] == "assistant" else "user"
-                        formatted_history.append({"role": role, "parts": [msg["content"]]})
+                        if role != last_role:
+                            formatted_history.append({"role": role, "parts": [content]})
+                            last_role = role
+                            
+            if last_role == "user":
+                formatted_history.pop()
                     
             formatted_history.append({"role": "user", "parts": [prompt]})
             response = self.model.generate_content(formatted_history)
             return response.text
+            
         except Exception as e:
             logger.error(f"Gemini API Error: {str(e)}")
             return f"Error communicating with AI: {str(e)}"
 
     def generate_stream(self, prompt: str, chat_history: list = None):
-        """Streams the response securely, catching silent chunk errors."""
+        """Streams the response while preventing User-User history crashes."""
         try:
             formatted_history = []
+            last_role = None
+            
             if chat_history:
                 for msg in chat_history:
-                    # Never pass empty strings to Gemini; it causes silent crashes
-                    if msg.get("content") and str(msg.get("content")).strip():
+                    content = msg.get("content")
+                    if content and str(content).strip():
                         role = "model" if msg["role"] == "assistant" else "user"
-                        formatted_history.append({"role": role, "parts": [msg["content"]]})
+                        # Gemini STRICTLY requires User -> Model -> User. Ignore duplicates.
+                        if role != last_role:
+                            formatted_history.append({"role": role, "parts": [content]})
+                            last_role = role
+                            
+            # If a previous assistant response failed, remove the orphaned user query
+            if last_role == "user":
+                formatted_history.pop()
                     
             formatted_history.append({"role": "user", "parts": [prompt]})
             
             response = self.model.generate_content(formatted_history, stream=True)
-            
             for chunk in response:
-                try:
-                    # Safely extract text. If Google blocks a chunk (safety rating), it skips smoothly.
-                    if chunk.text:
-                        yield chunk.text
-                except Exception:
-                    continue
-                
+                if chunk.text:
+                    yield chunk.text
+                    
         except Exception as e:
             logger.error(f"Gemini Streaming Error: {str(e)}")
-            yield f"\n\n⚠️ **API Error:** {str(e)}"
+            yield f"⚠️ **API Error:** {str(e)}\n\nClear your chat history or refresh the page."

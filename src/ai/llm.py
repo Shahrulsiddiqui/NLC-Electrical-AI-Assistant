@@ -1,7 +1,7 @@
 import google.generativeai as genai
 import os
 import config
-from src.prompts import SYSTEM_INSTRUCTION
+from src.ai.prompts import SYSTEM_INSTRUCTION
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class GeminiService:
         # Initialize model with system instruction
         self.model = genai.GenerativeModel(
             model_name=config.GEMINI_MODEL_NAME,
-system_instruction=SYSTEM_INSTRUCTION
+            system_instruction=SYSTEM_INSTRUCTION
         )
 
     def generate_response(self, prompt: str, chat_history: list = None) -> str:
@@ -43,4 +43,3 @@ system_instruction=SYSTEM_INSTRUCTION
         except Exception as e:
             logger.error(f"Gemini API Error: {str(e)}")
             return f"Error communicating with AI: {str(e)}"
-

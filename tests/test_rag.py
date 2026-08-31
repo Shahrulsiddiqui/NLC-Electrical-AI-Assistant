@@ -1,5 +1,5 @@
 
-from src.prompts import build_rag_prompt
+from src.ai.prompts import build_rag_prompt
 
 def test_build_rag_prompt():
     chunks = [

@@ -113,19 +113,17 @@ with tab_chat:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner("Analyzing documents & generating response..."):
-                response_data = rag_pipeline.answer_question(prompt, st.session_state.messages[:-1])
-                answer = response_data["answer"]
-                
-                st.markdown(answer)
-                
-                if response_data.get("sources"):
-                    with st.expander("View Retrieved Context"):
-                        for idx, src in enumerate(response_data["sources"]):
-                            st.markdown(f"**Source:** `{src['source']}` (Page {src['page']})")
-                            st.caption(src["text"])
-                            if idx < len(response_data["sources"]) - 1:
-                                st.divider()
+            # Stream the answer directly to the UI
+            response_data = rag_pipeline.stream_answer(prompt, st.session_state.messages[:-1])
+            answer = st.write_stream(response_data["generator"])
+            
+            if response_data.get("sources"):
+                with st.expander("View Retrieved Context"):
+                    for idx, src in enumerate(response_data["sources"]):
+                        st.markdown(f"**Source:** `{src['source']}` (Page {src['page']})")
+                        st.caption(src["text"])
+                        if idx < len(response_data["sources"]) - 1:
+                            st.divider()
                                 
         st.session_state.messages.append({"role": "assistant", "content": answer})
 

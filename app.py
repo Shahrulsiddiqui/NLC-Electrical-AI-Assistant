@@ -42,21 +42,35 @@ with st.sidebar:
                 total_chunks = 0
                 for file in uploaded_files:
                     try:
-                        pages_data = load_pdf_from_bytes(file.read(), file.name)
+                        # 1. Load PDF and get the hash dictionary
+                        pdf_result = load_pdf_from_bytes(file.read(), file.name)
+                        pages_data = pdf_result["pages"]
+                        
                         if not pages_data:
                             st.error(f"No extractable text found in {file.name}")
                             continue
                             
+                        # 2. Chunk using the new hash-aware chunker
                         chunks = chunk_text(pages_data)
                         texts = [c["text"] for c in chunks]
+                        
+                        # 3. Generate embeddings
                         embeddings = embedder.embed_texts(texts)
-                        vector_store.add_chunks(chunks, embeddings)
-                        total_chunks += len(chunks)
+                        
+                        # 4. Attempt to add to ChromaDB
+                        was_added = vector_store.add_chunks(chunks, embeddings)
+                        
+                        if was_added:
+                            total_chunks += len(chunks)
+                            st.success(f"Processed {file.name}")
+                        else:
+                            st.info(f"Skipped {file.name} - Already exists in knowledge base.")
+                            
                     except Exception as e:
                         st.error(f"Error processing {file.name}: {e}")
                 
                 if total_chunks > 0:
-                    st.success(f"Successfully added {total_chunks} chunks to the knowledge base!")
+                    st.success(f"Successfully added {total_chunks} new chunks!")
         else:
             st.warning("Please upload PDFs first.")
 
@@ -79,7 +93,7 @@ with st.sidebar:
 
     st.divider()
     st.caption("**Model Info:**")
-    st.caption(f"LLM: Gemini 1.5 Flash")
+    st.caption(f"LLM: Gemini 3.6 Flash")
     st.caption(f"Embeddings: all-MiniLM-L6-v2")
 
 # ==========================================
@@ -121,4 +135,3 @@ if prompt := st.chat_input("E.g. Explain transformer differential protection..."
                             
     # 3. Add assistant response to state
     st.session_state.messages.append({"role": "assistant", "content": answer})
-

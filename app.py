@@ -1,9 +1,7 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-import time
 
-# Load environment variables first
 load_dotenv()
 
 from src.ingestion.pdf_loader import load_pdf_from_bytes
@@ -16,9 +14,6 @@ from src.engineering.troubleshooting import TroubleshootingFramework
 
 st.set_page_config(page_title="NLC Electrical AI", page_icon="⚡", layout="wide")
 
-# ==========================================
-# INITIALIZATION
-# ==========================================
 @st.cache_resource
 def get_rag_components():
     return RAGPipeline(), VectorStore(), EmbeddingService()
@@ -44,34 +39,29 @@ with st.sidebar:
                 for file in uploaded_files:
                     try:
                         pdf_result = load_pdf_from_bytes(file.read(), file.name)
-                        pages_data = pdf_result["pages"]
-                        
-                        if not pages_data:
+                        if not pdf_result["pages"]:
                             st.error(f"No extractable text found in {file.name}")
                             continue
                             
-                        chunks = chunk_text(pages_data)
+                        chunks = chunk_text(pdf_result["pages"])
                         texts = [c["text"] for c in chunks]
                         embeddings = embedder.embed_texts(texts)
-                        
                         was_added = vector_store.add_chunks(chunks, embeddings)
                         
                         if was_added:
                             total_chunks += len(chunks)
                             st.success(f"Processed {file.name}")
                         else:
-                            st.info(f"Skipped {file.name} - Already exists in knowledge base.")
-                            
+                            st.info(f"Skipped {file.name} - Already exists.")
                     except Exception as e:
                         st.error(f"Error processing {file.name}: {e}")
                 
                 if total_chunks > 0:
-                    st.success(f"Successfully added {total_chunks} new chunks!")
+                    st.success(f"Successfully added {total_chunks} chunks!")
         else:
             st.warning("Please upload PDFs first.")
 
     st.divider()
-    
     chunk_count = vector_store.get_collection_count()
     docs = vector_store.get_uploaded_documents()
     
@@ -86,22 +76,14 @@ with st.sidebar:
         st.success("Knowledge base cleared.")
         st.rerun()
 
-    st.divider()
-    st.caption("**Model Info:**")
-    st.caption("LLM: Gemini 3.6 Flash")
-    st.caption("Embeddings: all-MiniLM-L6-v2")
-
 # ==========================================
 # UI: MAIN AREA
 # ==========================================
 st.title("⚡ NLC Electrical Engineering AI Copilot")
+st.info("⚠️ **DISCLAIMER:** This AI assistant is intended for engineering learning and preliminary analysis. Verify safety-critical information before use.")
 
-st.info("⚠️ **DISCLAIMER:** This AI assistant is intended for engineering learning, documentation assistance, and preliminary analysis. It must not replace approved plant procedures, OEM manuals, protection philosophies, statutory requirements, or qualified engineering judgment.")
-
-# Create modular navigation tabs
 tab_chat, tab_calc, tab_troubleshoot = st.tabs(["💬 Assistant", "🧮 Calculators", "🔧 Troubleshooting"])
 
-# --- TAB 1: Chat Assistant ---
 with tab_chat:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -113,7 +95,6 @@ with tab_chat:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            # Stream the answer directly to the UI
             response_data = rag_pipeline.stream_answer(prompt, st.session_state.messages[:-1])
             answer = st.write_stream(response_data["generator"])
             
@@ -124,10 +105,11 @@ with tab_chat:
                         st.caption(src["text"])
                         if idx < len(response_data["sources"]) - 1:
                             st.divider()
-                                
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+            
+            # Safe append: Only save to history if it actually generated text
+            if answer and str(answer).strip():
+                st.session_state.messages.append({"role": "assistant", "content": answer})
 
-# --- TAB 2: Deterministic Calculators ---
 with tab_calc:
     st.markdown("### Electrical Calculations Engine")
     calc_option = st.selectbox("Select Calculation", ["Three-Phase Current", "Transformer Impedance"])
@@ -154,11 +136,9 @@ with tab_calc:
             st.success(f"**Result:** {res['result']} {res['units']}")
             st.caption(f"**Formula:** {res['formula']}")
 
-# --- TAB 3: Troubleshooting ---
 with tab_troubleshoot:
     st.markdown("### Engineering Fault Analysis")
     fault_opt = st.selectbox("Select Fault Scenario", ["Earth_Fault", "Differential"])
-    
     if st.button("Generate Troubleshooting Guide"):
         guide = TroubleshootingFramework.get_template(fault_opt)
         st.markdown(guide)

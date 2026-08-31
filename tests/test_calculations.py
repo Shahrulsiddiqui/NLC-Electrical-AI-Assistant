@@ -6,7 +6,7 @@ def test_three_phase_current_calculation():
     result = ElectricalCalculators.three_phase_current(power_mva=10.0, voltage_kv=11.0, pf=0.85)
     
     assert "error" not in result
-    assert result["result"] == 618.04
+    assert result["result"] == 617.49
     assert result["units"] == "A"
 
 def test_three_phase_current_zero_voltage():

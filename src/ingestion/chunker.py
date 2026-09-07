@@ -1,39 +1,57 @@
+import hashlib
+import logging
 from typing import List, Dict, Any
-import config
 
-def chunk_text(pages_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Splits page text into smaller chunks with overlap and deterministic IDs."""
+logger = logging.getLogger(__name__)
+
+def generate_chunk_id(doc_hash: str, page_num: int, chunk_index: int) -> str:
+    """Creates a deterministic ID for tracking individual chunks in ChromaDB."""
+    raw_id = f"{doc_hash}_p{page_num}_c{chunk_index}"
+    return hashlib.md5(raw_id.encode()).hexdigest()
+
+def chunk_text(pages_data: List[Dict[str, Any]], max_chars: int = 1500, overlap: int = 200) -> List[Dict[str, Any]]:
+    """Splits text by structural paragraphs before falling back to character limits."""
     chunks = []
-
-    for page_dict in pages_data:
-        text = page_dict["text"]
-        source = page_dict["source"]
-        doc_hash = page_dict["doc_hash"]
-        page_num = page_dict["page"]
+    
+    for page in pages_data:
+        source = page["source"]
+        doc_hash = page["doc_hash"]
+        page_num = page["page_number"]
+        full_text = page["text"]
         
-        words = text.split()
-        if not words:
-            continue
-            
-        step = config.CHUNK_SIZE - config.CHUNK_OVERLAP
-        if step <= 0:
-            step = config.CHUNK_SIZE
-            
-        chunk_counter = 0
-        for i in range(0, len(words), step):
-            chunk_words = words[i:i + config.CHUNK_SIZE]
-            chunk_text_str = " ".join(chunk_words)
-            
-            # V1 Stable ID Format: hash_p[page]_c[chunk]
-            chunk_id = f"{doc_hash}_p{page_num:03d}_c{chunk_counter:03d}"
-            
+        # Structure-aware split: target double newlines first
+        paragraphs = [p.strip() for p in full_text.split('\n\n') if p.strip()]
+        
+        current_chunk_text = ""
+        chunk_index = 0
+        
+        for para in paragraphs:
+            if len(current_chunk_text) + len(para) <= max_chars:
+                current_chunk_text += para + "\n\n"
+            else:
+                if current_chunk_text.strip():
+                    chunks.append({
+                        "chunk_id": generate_chunk_id(doc_hash, page_num, chunk_index),
+                        "text": current_chunk_text.strip(),
+                        "source": source,
+                        "page": page_num,
+                        "doc_hash": doc_hash
+                    })
+                    chunk_index += 1
+                
+                # Maintain overlap context across chunk boundaries
+                overlap_text = current_chunk_text[-overlap:] if len(current_chunk_text) > overlap else current_chunk_text
+                current_chunk_text = overlap_text.strip() + "\n\n" + para + "\n\n"
+        
+        # Flush the remaining text
+        if current_chunk_text.strip():
             chunks.append({
-                "chunk_id": chunk_id,
+                "chunk_id": generate_chunk_id(doc_hash, page_num, chunk_index),
+                "text": current_chunk_text.strip(),
                 "source": source,
-                "doc_hash": doc_hash,
                 "page": page_num,
-                "text": chunk_text_str
+                "doc_hash": doc_hash
             })
-            chunk_counter += 1
             
+    logger.info(f"Generated {len(chunks)} structural chunks.")
     return chunks

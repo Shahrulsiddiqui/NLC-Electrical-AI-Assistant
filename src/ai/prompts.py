@@ -1,38 +1,30 @@
-SYSTEM_INSTRUCTION = """You are an experienced electrical power plant engineering assistant specializing in power systems, generators, transformers, motors, switchgear, protection, substations, electrical machines, maintenance, reliability, and industrial electrical systems.
+SYSTEM_INSTRUCTION = """You are the NLC Electrical AI Assistant, a deterministic power plant engineering copilot.
+1. Distinguish clearly between NLC-verified facts and general engineering principles.
+2. NEVER instruct the user to operate live plant equipment. Defer to official SOPs and permits.
+3. Keep answers highly structured, technical, and concise. Do not use conversational fluff."""
 
-CRITICAL RULES:
-1. Prefer information from retrieved documents to construct your answer.
-2. Do not invent or hallucinate technical information, relay settings, equipment ratings, or plant-specific operating procedures.
-3. If the provided document context does not contain sufficient information to answer the question, clearly state: "I could not find sufficient information in the uploaded documents."
-4. Distinguish between documented information (cite the source/page), standard engineering principles, and your interpretation.
-5. Never claim your recommendation is an approved operating instruction. 
-6. For safety-critical questions (switching operations, live work, protection settings, isolations), explicitly advise the user to verify against the latest approved plant procedure, OEM manual, protection philosophy, and applicable standards.
-7. Be technically detailed but clear. Explain concepts step-by-step when requested.
-8. Structure your answers professionally with clear headings or bullet points where appropriate.
-"""
-
-def build_rag_prompt(query: str, retrieved_chunks: list) -> str:
-    context_str = ""
+def build_rag_prompt(query: str, retrieved_chunks: list, confidence: str) -> str:
+    context_blocks = []
     for idx, chunk in enumerate(retrieved_chunks):
-        context_str += f"[Source: {chunk['source']} | Page: {chunk['page']}]\n"
-        context_str += f"{chunk['text']}\n\n"
-        
-        prompt = f"""DOCUMENT CONTEXT:
-{context_str}
+        context_blocks.append(f"--- SOURCE {idx+1}: {chunk['source']} (Page {chunk['page']}) ---\n{chunk['text']}")
+    
+    context_str = "\n\n".join(context_blocks)
+    
+    if confidence == "HIGH":
+        behavior_instruction = "Answer the query using ONLY the provided NLC Document Context. Cite the source name and page number."
+    elif confidence == "LOW" and retrieved_chunks:
+        behavior_instruction = "The retrieved NLC documents lack sufficient detail. State explicitly that NLC documentation is insufficient, then provide an answer based on GENERAL ELECTRICAL ENGINEERING principles."
+    else:
+        behavior_instruction = "No NLC documents are available. Answer based on general electrical engineering principles."
 
-USER QUESTION:
-{query}
+    prompt = f"""
+    {behavior_instruction}
 
-INSTRUCTIONS:
-Answer the question strictly using the supplied document context. Do not invent information. If the context is insufficient, say so. 
+    NLC DOCUMENT CONTEXT:
+    {context_str if context_str else "No documents uploaded."}
 
-FORMAT YOUR RESPONSE AS FOLLOWS:
-- Provide a direct, high-level summary in 1-2 sentences.
-- List the exact technical parameters, conditions, or regulatory clauses using bullet points.
-- Explain the operating rationale or concepts step-by-step.
-
-At the end of your response, ALWAYS include a 'Sources' section listing the document names and page numbers you used. If no documents were used, do not list sources.
-"""
+    ENGINEER'S QUERY:
+    {query}
+    """
     return prompt
-
 

@@ -1,29 +1,32 @@
-# NLC Electrical AI Assistant (V1)
+# ⚡ NLC Electrical AI Assistant V1.0
+**Power Plant Engineering Copilot**
 
-An AI-powered electrical engineering copilot designed for power-plant engineers. This tool combines Retrieval-Augmented Generation (RAG) with deterministic engineering calculations and strict safety guardrails to assist with documentation lookup, troubleshooting, and plant maintenance.
+A production-ready, mobile-first AI assistant designed for NLC electrical engineers. It combines document-grounded Retrieval-Augmented Generation (RAG) with isolated deterministic calculation engines and strict operational safety guardrails.
 
-### 🚀 V1 Capabilities
-* **Intelligent RAG Assistant:** Query technical documents with accurate citations and source page references.
-* **Smart Ingestion Pipeline:** Automatic SHA-256 duplicate detection prevents re-indexing the same PDF, saving compute and time.
-* **Deterministic Calculations:** A dedicated Python engine handles math (e.g., three-phase current, transformer impedance) safely outside the LLM to eliminate AI hallucinations on critical numbers.
-* **Troubleshooting Framework:** Structured diagnostic templates for common electrical faults (e.g., Earth Faults, Differential Trips).
-* **Safety Guardrails:** Pre-generation query classification actively identifies and blocks unauthorized operational commands while injecting required safety warnings.
+## Core Capabilities
+* **Structure-Aware RAG:** Ingests plant manuals using PyMuPDF, chunks text by structural paragraphs, and persistently stores embeddings in ChromaDB for cross-session memory.
+* **Deterministic Calculators:** A dedicated Python engine processes 3-phase power, load current, and transformer impedance. Math is isolated from the LLM to prevent hallucinations.
+* **Troubleshooting Matrices:** Instant access to structured diagnostic guides for complex faults (e.g., Transformer Differential, Buchholz trips, Earth Faults).
+* **Safety-First Routing:** Active regex-based guardrails intercept operational commands (e.g., "close breaker", "bypass relay") and enforce strict permit-to-work/LOTO warnings.
+* **Mobile-First UI:** A ChatGPT-style interface with a sticky unified attachment composer and real-time streaming AI responses.
 
-### 🏗️ Modular Architecture
-The V1 codebase is decoupled for maintainability and scalability:
-* **`src/ingestion/`**: Handles PyMuPDF parsing, text extraction, and stable, hash-aware text chunking.
-* **`src/retrieval/`**: Manages the in-memory ChromaDB vector store and semantic embeddings.
-* **`src/ai/`**: Contains the Gemini 3.6 Flash integration, query routing, and RAG pipeline logic.
-* **`src/engineering/`**: Houses the deterministic math calculators and structured troubleshooting templates.
-* **`src/safety/`**: Executes risk classification (Low/Normal/High) to enforce plant safety protocols before the LLM generates a response.
+## Architecture Stack
+* **Frontend:** Streamlit
+* **LLM Framework:** Google Gemini (Streaming enabled)
+* **Vector Database:** ChromaDB (Persistent Local Storage)
+* **Ingestion:** PyMuPDF & Sentence-Transformers (`all-MiniLM-L6-v2`)
+* **CI/CD:** GitHub Actions (Pytest)
 
-### 🧪 Automated Testing (GitHub Actions)
-This repository utilizes GitHub Actions for Continuous Integration (CI). Every commit pushed to the `main` branch automatically triggers an Ubuntu virtual runner to execute the `pytest` suite. 
+## Local Installation
+1. Clone the repository and navigate to the project directory.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Create a `.env` file in the root directory and add: `GEMINI_API_KEY=your_api_key_here`
+4. Launch the copilot: `streamlit run app.py`
 
-The automated pipeline rigorously verifies:
-* Accuracy of the deterministic calculation engine.
-* Keyword detection in the safety guardrail classifier.
-* Stability of document hashing and chunk ID generation.
-* Proper import paths across the modular architecture.
+## Safety Philosophy
+This AI is an engineering assistant, not an operational authority. It is hardcoded to never authorize equipment energization, override LOTO protocols, or replace approved Standard Operating Procedures (SOPs). All safety-critical queries are automatically routed to a non-authoritative diagnostic mode.
 
-To view the latest test results or run logs, navigate to the **Actions** tab in this GitHub repository.
+## V2.0 Roadmap
+* Plant-specific equipment databases
+* Single-line diagram (SLD) visual analysis
+* Disturbance recorder (DR) event file parsing

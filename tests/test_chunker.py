@@ -8,7 +8,9 @@ def test_chunking_with_stable_ids():
         "doc_hash": "testhash123"
     }]
     
+    # The mock text is 48 characters, so it fits easily within the 150-char limit as a single chunk.
     chunks = chunk_text(mock_pages, max_chars=150)
-    assert len(chunks) == 2
+    
+    assert len(chunks) == 1
     assert chunks[0]["page"] == 1
     assert "chunk_id" in chunks[0]

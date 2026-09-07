@@ -24,6 +24,10 @@ rag_pipeline, vector_store, embedder = get_rag_components()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Track processed files to avoid re-ingesting them on every chat message
+if "processed_files" not in st.session_state:
+    st.session_state.processed_files = set()
+
 with st.sidebar:
     st.title("⚡ NLC AI Settings")
     st.caption("Power Plant Engineering Copilot")
@@ -32,6 +36,7 @@ with st.sidebar:
     st.metric("Database Chunks", chunk_count)
     if st.button("🗑️ Clear Knowledge Base", type="primary"):
         vector_store.clear_database()
+        st.session_state.processed_files.clear()
         st.success("Database cleared.")
         st.rerun()
 
@@ -47,41 +52,50 @@ with tab_chat:
     else:
         st.caption("⚪ **Knowledge Empty:** Attach PDFs below to ground the AI.")
 
+    # Render Chat History
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    with st.expander("📎 Attach Documents (PDF)", expanded=False):
-        uploaded_files = st.file_uploader("Upload NLC manuals before asking", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
-        if st.button("Process Documents", use_container_width=True):
-            if uploaded_files:
-                with st.spinner("Processing..."):
-                    total_added = 0
-                    for file in uploaded_files:
+    # Unified Composer: File uploader sits directly above the chat input
+    uploaded_files = st.file_uploader("Attach PDF documents", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
+
+    # Handle Chat Submission
+    if prompt := st.chat_input("Ask NLC Electrical AI..."):
+        
+        # 1. Auto-process attached documents silently before answering
+        if uploaded_files:
+            new_files = [f for f in uploaded_files if f.name not in st.session_state.processed_files]
+            if new_files:
+                with st.spinner("Ingesting attached documents..."):
+                    for file in new_files:
                         try:
                             pdf_result = load_pdf_from_bytes(file.read(), file.name)
                             if pdf_result["pages"]:
                                 chunks = chunk_text(pdf_result["pages"])
                                 texts = [c["text"] for c in chunks]
                                 embeddings = embedder.embed_texts(texts)
-                                if vector_store.add_chunks(chunks, embeddings):
-                                    total_added += len(chunks)
+                                vector_store.add_chunks(chunks, embeddings)
+                            st.session_state.processed_files.add(file.name)
                         except Exception as e:
                             st.error(f"Error processing {file.name}: {e}")
-                    if total_added > 0:
-                        st.success(f"Added {total_added} chunks. Ready to answer.")
-                        st.rerun()
-            else:
-                st.warning("Select a file first.")
 
-    if prompt := st.chat_input("Ask NLC Electrical AI..."):
+        # 2. Append and display user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
+        # 3. Stream Assistant Response
         with st.chat_message("assistant"):
             response_data = rag_pipeline.stream_answer(prompt, st.session_state.messages[:-1])
+            
+            # Stream the answer and catch silent API failures
             answer = st.write_stream(response_data["generator"])
+            
+            # Fallback if Gemini returns an empty string (e.g., blocked by safety filters)
+            if not answer or not str(answer).strip():
+                answer = "⚠️ **Response Blocked:** The AI was unable to generate a response. Please provide more context or rephrase your engineering query."
+                st.markdown(answer)
             
             if response_data.get("sources"):
                 with st.expander("📚 View Retrieved Context"):
@@ -91,8 +105,7 @@ with tab_chat:
                         if idx < len(response_data["sources"]) - 1:
                             st.divider()
             
-            if answer and str(answer).strip():
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
 with tab_calc:
     calc_option = st.selectbox("Select Calculation", ["Three-Phase Current", "Three-Phase Power", "Transformer Impedance"], label_visibility="collapsed")

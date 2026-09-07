@@ -1,29 +1,12 @@
 class TroubleshootingFramework:
-    @staticmethod
-    def get_template(fault_type: str) -> str:
-        templates = {
-            "earth_fault": """
-**EVENT:** Earth Fault Trip
-**INITIAL CHECKS:**
-* Verify relay indications and fault current logs.
-* Identify the faulted phase.
-* Check circuit-breaker status.
-**POSSIBLE CAUSES:**
-* Cable insulation failure.
-* External flashover (e.g., wildlife, vegetation).
-* CT saturation or wiring issue.
-**SAFETY:** Ensure the feeder is fully isolated and earthed before visual inspection.
-""",
-            "differential": """
-**EVENT:** Transformer Differential (87T) Trip
-**INITIAL CHECKS:**
-* Check Buchholz and PRV status.
-* Review disturbance recorder for inrush vs. internal fault.
-**POSSIBLE CAUSES:**
-* Internal winding short.
-* CT mismatch or failure.
-* Severe external fault causing CT saturation.
-**SAFETY:** Do NOT re-energize the transformer without comprehensive testing (DGA, Winding Resistance).
-"""
-        }
-        return templates.get(fault_type.lower(), "Standard troubleshooting template unavailable for this fault. Please consult the OEM manual.")
+    TEMPLATES = {
+        "Earth_Fault": "### 🌍 Earth Fault Analysis\n**Possible Causes:**\n* Insulation breakdown\n* Moisture ingress\n* Physical cable damage\n\n**Required Checks:**\n1. Isolate the affected circuit.\n2. Perform Megger/IR test on cables.\n3. Check relay targets and event logger.\n\n**Safety Note:** Do not re-energize until IR values are within statutory limits.",
+        
+        "Differential": "### ⚡ Transformer Differential (87T)\n**Possible Causes:**\n* Internal winding fault\n* CT saturation or ratio mismatch\n* Heavy inrush current\n\n**Required Checks:**\n1. Verify Buchholz gas accumulation.\n2. Check PRV status.\n3. Test winding resistance and DGA.\n\n**Safety Note:** A differential trip requires comprehensive internal inspection before charging.",
+        
+        "Buchholz": "### 🛢️ Buchholz Relay Alarm/Trip\n**Possible Causes:**\n* Low oil level\n* Insulation degradation generating gas\n* Severe internal short circuit\n\n**Required Checks:**\n1. Check for visible oil leaks.\n2. Collect gas from relay (test combustibility).\n3. Perform DGA (Dissolved Gas Analysis) on main tank oil.\n\n**Safety Note:** Do not reset trip without analyzing the trapped gas."
+    }
+
+    @classmethod
+    def get_template(cls, fault_type: str) -> str:
+        return cls.TEMPLATES.get(fault_type, "Diagnostic template not found. Refer to official plant SOPs.")

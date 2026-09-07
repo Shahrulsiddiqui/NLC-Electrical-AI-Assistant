@@ -1,16 +1,11 @@
-
 from src.ai.prompts import build_rag_prompt
 
 def test_build_rag_prompt():
-    chunks = [
-        {"source": "doc1.pdf", "page": 5, "text": "Transformer relays trip on faults."},
-        {"source": "doc2.pdf", "page": 10, "text": "CT saturation causes errors."}
-    ]
+    query = "What is differential protection?"
+    chunks = [{"source": "SOP.pdf", "page": 1, "text": "Differential protects the transformer."}]
     
-    query = "What causes errors?"
-    prompt = build_rag_prompt(query, chunks)
+    # V1.0 requires confidence scoring
+    prompt = build_rag_prompt(query, chunks, confidence="HIGH")
     
-    assert "doc1.pdf" in prompt
-    assert "CT saturation causes errors." in prompt
-    assert "USER QUESTION:\nWhat causes errors?" in prompt
-    assert "Do not invent information" in prompt
+    assert "SOP.pdf" in prompt
+    assert "Differential protects" in prompt

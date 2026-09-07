@@ -2,7 +2,6 @@
 streamlit
 PyMuPDF
 chromadb
-sentence-transformers
 google-generativeai
 python-dotenv
 pytest

@@ -15,14 +15,16 @@ class RAGPipeline:
             self.vector_store = VectorStore()
             self.llm = GeminiService()
             self.is_ready = True
-        except ValueError as e:
+        except Exception as e:
             logger.error(f"RAG init failed: {e}")
             self.is_ready = False
             self.error_msg = str(e)
 
     def stream_answer(self, query: str, chat_history: list) -> dict:
         if not self.is_ready:
-            def error_gen(): yield f"System error: {self.error_msg}"
+            # Safely capture the string before yielding
+            sys_err = self.error_msg
+            def error_gen(): yield f"System error: {sys_err}"
             return {"generator": error_gen(), "sources": []}
 
         try:
@@ -52,6 +54,9 @@ class RAGPipeline:
             }
             
         except Exception as e:
-            logger.error(f"RAG Error: {e}")
-            def error_gen(): yield f"Error during retrieval: {str(e)}"
+            # CRITICAL FIX: Save the error to a standard string variable first
+            error_message = str(e)
+            logger.error(f"RAG Error: {error_message}")
+            
+            def error_gen(): yield f"⚠️ **Error during retrieval:** {error_message}\n\nPlease check your API keys and try again."
             return {"generator": error_gen(), "sources": []}

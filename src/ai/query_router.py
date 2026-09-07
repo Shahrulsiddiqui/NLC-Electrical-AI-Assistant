@@ -1,27 +1,24 @@
 from enum import Enum
 
 class QueryType(Enum):
+    CALCULATION = "CALCULATION"
     DOCUMENT_LOOKUP = "DOCUMENT_LOOKUP"
     TROUBLESHOOTING = "TROUBLESHOOTING"
-    CALCULATION = "CALCULATION"
-    PROCEDURE = "PROCEDURE"
-    GENERAL = "GENERAL"
+    GENERAL_ENGINEERING = "GENERAL_ENGINEERING"
+    UNKNOWN = "UNKNOWN"
 
 class QueryRouter:
-    @staticmethod
-    def route_query(query: str) -> QueryType:
+    @classmethod
+    def route_query(cls, query: str) -> QueryType:
         query_lower = query.lower()
         
-        if any(word in query_lower for word in ["calculate", "current", "voltage drop", "power factor"]):
+        if any(kw in query_lower for kw in ["calculate", "formula", "value of", "compute"]):
             return QueryType.CALCULATION
-            
-        if any(word in query_lower for word in ["tripped", "check", "fault", "alarm", "cause"]):
+        elif any(kw in query_lower for kw in ["tripped", "fault on", "alarm", "diagnose"]):
             return QueryType.TROUBLESHOOTING
+        elif any(kw in query_lower for kw in ["according to manual", "in the sop", "document says"]):
+            return QueryType.DOCUMENT_LOOKUP
+        elif any(kw in query_lower for kw in ["what is", "explain", "how does"]):
+            return QueryType.GENERAL_ENGINEERING
             
-        if any(word in query_lower for word in ["procedure", "step", "how to"]):
-            return QueryType.PROCEDURE
-            
-        if any(word in query_lower for word in ["what is", "explain", "difference"]):
-            return QueryType.GENERAL
-            
-        return QueryType.DOCUMENT_LOOKUP
+        return QueryType.UNKNOWN

@@ -36,6 +36,8 @@ class SafetyClassifier:
             return "⚠️ **SAFETY WARNING:** This assistant cannot authorize switching operations. Verify the applicable approved switching procedure, consult plant SOPs, and obtain required permits (LOTO) before operating any equipment."
         elif risk_level == RiskLevel.DIAGNOSTIC:
             return "ℹ️ **DIAGNOSTIC NOTICE:** Information provided is for preliminary analysis. Do not reset protection relays or re-energize equipment without a qualified engineering inspection."
+        return ""        elif risk_level == RiskLevel.DIAGNOSTIC:
+            return "ℹ️ **DIAGNOSTIC NOTICE:** Information provided is for preliminary analysis. Do not reset protection relays or re-energize equipment without a qualified engineering inspection."
         return ""        if any(word in query_lower for word in ["trip", "fault", "alarm", "check"]):
             return RiskLevel.DIAGNOSTIC
             
